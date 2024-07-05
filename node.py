@@ -1,12 +1,15 @@
 from socket import socket, AF_INET, SOCK_STREAM
 from threading import Thread
 from random import randint
+import os
 
 class Node():
     def __init__(self,id):
         # identificação, porta e thread pro servidor
         self.id = id
         self.porta = randint(200,50000)
+        self.data = f'/no{id+1}'
+        self.peers = None
         Thread(target=self.servidor).start()
         print(f'criado nó {self.id} com porta {self.porta}')
 
@@ -31,10 +34,17 @@ class Node():
         # DFS em rede (a fazer)
         pass
 
+    # Pega informações dos vizinhos.
+
     def transverse(self, master):
         # DFS em rede parte 2
         for port in self.peers:
-            self.enviar(f'GET {master}', port)
+            self.enviar(f'GET {master} ', port)
+
+    # Pega informações de todos os nós em ordem crescente
+
+    def get_info(self, master):
+        self.enviar(f'INFO {master}',self.peers[1])
 
     # ------------------------------    
     # funcionalidades nativas do p2p
@@ -48,13 +58,27 @@ class Node():
         rep = '200 ok'
         mClientSocket.send(rep.encode())
 
-        # encoding adicional
+        #---------------------
+        # PROCESSAR REPLIES DE REQUISIÇÃO
+        #---------------------
 
-        if req.split(" ")[0] == 'GET':
+        tipo = req.split(" ")[0]
+        if tipo == 'GET':
             self.enviar(f'DATA {self.data}', int(req.split(" ")[1]))
 
-        if req.split(" ")[0] == 'DATA':
+        if tipo == 'INFO':
+            if int(req.split(" ")[1]) != self.porta:
+                self.enviar(f'DATA {self.data}', int(req.split(" ")[1]))
+                self.get_info(int(req.split(" ")[1]))
+
+        #---------------------
+        # PROCESSAR RESPOSTAS DE SAIDA
+        #---------------------
+
+        if tipo == 'DATA':
             self.hash[mClientAddr[1]] = " ".join(req.split(" ")[1:])
+
+        
 
     def servidor(self):
         SocketServer = socket(AF_INET, SOCK_STREAM)

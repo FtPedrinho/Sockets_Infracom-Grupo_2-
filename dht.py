@@ -16,11 +16,17 @@ class DHT():
         self.nos[2].put('tiktoks pedrelias')
         self.nos[3].put('album novo da taylor')
         self.nos[4].put('vazamento prova 2 infrahard')
+    
+
+    def add(self):
+        self.nos.append(Node(len(self.nos)))
+        for no in self.nos:
+            no.vizinhos([self.nos[(no.id-1)%len(self.nos)].porta,self.nos[(no.id+1)%len(self.nos)].porta])
         
 pega = DHT()
 
 for no in pega.nos:
-    no.transverse(no.porta)
+    no.get_info(no.porta)
     print()
 
 time.sleep(3)
