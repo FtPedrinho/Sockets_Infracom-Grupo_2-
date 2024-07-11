@@ -29,9 +29,15 @@ for no in pega.nos:
     no.get_info(no.porta)
     print()
 
-time.sleep(3)
+time.sleep(1)
 print("INFORMAÇÕES RECEBIDAS: (PORTA : INFORMAÇÃO GUARDADA)")
 for no in pega.nos:
     print(f'Nó {no.id}')
     print(no.hash)
     print()
+
+pega.nos[0].filename = 'clipe.mp4'
+comeco = time.time()
+pega.nos[0].send_file(pega.nos[1].porta)
+
+print(time.time()-comeco)
