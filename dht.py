@@ -11,11 +11,11 @@ class DHT():
         for no in self.nos:
             no.vizinhos([self.nos[(no.id-1)%5].porta,self.nos[(no.id+1)%5].porta])
         
-        self.nos[0].put('senhas cartao de credito marciano')
-        self.nos[1].put('arquivos exposed arthur couto')
-        self.nos[2].put('tiktoks pedrelias')
-        self.nos[3].put('album novo da taylor')
-        self.nos[4].put('vazamento prova 2 infrahard')
+        self.nos[0].put('File 1')
+        self.nos[1].put('File 2')
+        self.nos[2].put('File 3')
+        self.nos[3].put('File 4')
+        self.nos[4].put('File 5')
     
 
     def add(self):
