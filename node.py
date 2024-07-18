@@ -1,126 +1,144 @@
-from socket import socket, AF_INET, SOCK_STREAM
-from threading import Thread
-from random import randint
-import os
+from socket import socket, AF_INET, SOCK_STREAM 
+from threading import Thread 
+from random import randint 
+from hashlib import sha1  
+import os  
 
 class Node():
-    def __init__(self,id):
-        # identificação, porta e thread pro servidor
-        self.id = self.encode()
-        self.porta = randint(200,50000)
+    
+    def __init__(self, id):
+        
+        # Inicialização do nó com um identificador único e porta aleatória
+        
+        self.id = id
+        self.porta = randint(200, 50000)
         
         self.filename = ''
         self.data = ''
-        self.pasta = f'no{id+1}/'
-        self.peers = None
-        self.hashtable = []
+        self.pasta = f'no{id+1}/'  # Diretório específico para o nó
+        self.peers = None  # Vizinhos do nó
         
+        # Inicia uma thread para o servidor
         Thread(target=self.servidor).start()
         print(f'criado nó {self.id} com porta {self.porta}')
         
-
-        self.files = {}
-        self.hash = {}
+        self.files = {}  # files[hash do arquivo] = nome_do_arquivo.txt
+        self.hash = {}  # Armazena hash de arquivos de outros nós
         try:
-            os.mkdir(self.pasta)
+            os.mkdir(self.pasta)  # Cria o diretório do nó
         except:
             pass
     
     # ------------------------------    
-    # funções de guardar data
+    # Funções de guardar data
     # ------------------------------    
 
+
     def PUT(self, data):
-        self.make_file(data)
-        self.get_files()
+        self.make_file(data)  # Cria um arquivo com dados aleatórios
+        self.get_files()  # Atualiza a lista de arquivos do nó
+
 
     def GET(self, id):
         try:
-            return self.files[id] 
-        except:
-            return False
+            if id in self.files.keys():
+                return self.files[id]  # Retorna o arquivo se ele existir no nó (não acontece por enquanto)
+            else:
+                no_com_arquivo = int(self.hash[id])
+                self.enviar(f'GET {id} {self.porta}', no_com_arquivo)  # Pede o arquivo, manda o hash do arquivo, a porta do nó que tá pedindo para o nó que possui o arquivo
+        except Exception as e:
+            print(e)
 
 
     def vizinhos(self, nb):
-        self.peers = nb
+        self.peers = nb  # Define os vizinhos do nó
 
-    def encode(self):
-        return randint(1,2**32)
+
+    def encode(self, string):
+        return sha1(string.encode()).hexdigest()  # Processo de gerar os hashes dos arquivos
     
+
     def get_files(self):
-            files = os.listdir(self.pasta)
-            for file in files:
-                self.files[self.encode()] = file
+        files = os.listdir(self.pasta)  # Lista todos os arquivos no diretório do nó
+        for file in files:
+            self.files[self.encode(file)] = file  # Atualiza o dicionário de arquivos com seus hashes
     
+
     def make_file(self, data):
         with open(f'{self.pasta}/{data}', 'w') as arquivo:
             for _ in range(128):
-                arquivo.write(f'{randint(0,9)}')
+                arquivo.write(f'{randint(0,9)}')  # Escreve dados aleatórios no arquivo
 
     # ------------------------------    
-    # funções de request
+    # Funções de request
     # ------------------------------    
 
-    # Pega informações dos vizinhos.
-
-    def transverse(self, master):
-        # DFS em rede parte 2
-        for port in self.peers:
-            self.enviar(f'GET {master} ', port)
-
-    # Pega informações de todos os nós em ordem crescente
 
     def get_info(self, master):
-        self.enviar(f'INFO {master}',self.peers[1])
+        self.enviar(f'INFO {master}', self.peers[1])  # Gira de maneira circular, pede informações para TODOS os nós
+
 
     # ------------------------------    
-    # funcionalidades nativas do p2p
+    # Funcionalidades nativas do p2p
     # ------------------------------  
       
+
     def HandleRequest(self, mClientSocket, mClientAddr):
-        data = mClientSocket.recv(2048)
-        req = data.decode()
-        print(f'A requisição foi:{req}')
+        data = mClientSocket.recv(2048)  # Recebe dados do cliente
+        req = data.decode()  # Decodifica a requisição
         rep = '200 ok'
-        mClientSocket.send(rep.encode())
+        mClientSocket.send(rep.encode())  # Envia resposta para o cliente
 
-        tipo = req.split(" ")[0]
+        tipo = req.split(" ")[0]  # Pega o tipo da requisição
+
+
+    #-----------------------------
+    # Tipos de requisição
+    #-----------------------------
+
+
         if tipo == 'GET':
-            self.enviar(f'DATA {self.data}', int(req.split(" ")[1]))
+            self.send_file(int(req.split(" ")[2]), req.split(" ")[1])  # Entra aqui em um self.get(), ele puxa a função de enviar arquivo, enviando o hash e a porta
 
-        if tipo == 'INFO':
-            if int(req.split(" ")[1]) != self.porta:
-                self.enviar(f'DATA {self.data}', int(req.split(" ")[1]))
-                self.get_info(int(req.split(" ")[1]))
+
+        if tipo == 'INFO': # Entra aqui em um get_info()
+            portamaster = int(req.split(" ")[1])
+            porta_sua = self.porta
+            if portamaster != porta_sua:
+                for key in self.files.keys():
+                    self.enviar(f'DATA {key} {porta_sua}', int(req.split(" ")[1]))  # Envia dados para o nó que pediu as informações
+                self.get_info(int(req.split(" ")[1])) # Repassa a chamada para o próximo nó
+
 
         if tipo == 'DATA':
-            self.hash[mClientAddr[1]] = " ".join(req.split(" ")[1:])
+            self.hash[req.split(" ")[1]] = req.split(" ")[2]  # Atualiza a hash table do nó
+
 
         if tipo == 'FILE':
             filename = req.split(" ")[1]
-            self.receive_file(mClientSocket, filename)
+            self.receive_file(mClientSocket, filename)  # Recebe o arquivo
 
 
     def servidor(self):
-        SocketServer = socket(AF_INET, SOCK_STREAM)
+        SocketServer = socket(AF_INET, SOCK_STREAM)  
         mSocketServer = socket(AF_INET, SOCK_STREAM)
-        mSocketServer.bind(('localhost',self.porta))
-        mSocketServer.listen()
+        mSocketServer.bind(('localhost', self.porta))  
+        mSocketServer.listen()  
         while True:
-            clientSocket, clientAddr =  mSocketServer.accept()
-            #print(f'O servidor aceitou a conexão do Cliente: {clientAddr}')
+            clientSocket, clientAddr = mSocketServer.accept()  
             Thread(target=self.HandleRequest, args=(clientSocket, clientAddr)).start()
+
 
     def enviar(self, message, port):
         mClientSocket = socket(AF_INET, SOCK_STREAM)
-        mClientSocket.connect(('localhost', port))
-        mClientSocket.send(message.encode())
-        data = mClientSocket.recv(2048)
+        mClientSocket.connect(('localhost', port))  
+        mClientSocket.send(message.encode()) 
+        data = mClientSocket.recv(2048)  
         reply = data.decode()
-        print(f'Resposta recebida:{reply}')
+
 
     def receive_file(self, mClientSocket, filename):
-        with open(self.pasta+filename, 'wb') as f:
+        with open(self.pasta + filename, 'wb') as f:
             while True:
                 bytes_read = mClientSocket.recv(4096)
                 if not bytes_read:
@@ -128,8 +146,9 @@ class Node():
                 f.write(bytes_read)
         print(f'Arquivo {filename} recebido com sucesso')
     
-    def send_file(self, port):
-        filepath = self.pasta+self.filename
+    
+    def send_file(self, port, hashed):
+        filepath = self.pasta + self.files[hashed]
         mClientSocket = socket(AF_INET, SOCK_STREAM)
         mClientSocket.connect(('localhost', port))
         
@@ -147,9 +166,3 @@ class Node():
                 mClientSocket.sendall(bytes_read)
 
         mClientSocket.close()
-
-    
-
-
-
- 
