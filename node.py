@@ -6,35 +6,60 @@ import os
 class Node():
     def __init__(self,id):
         # identificação, porta e thread pro servidor
-        self.id = id
+        self.id = self.encode()
         self.porta = randint(200,50000)
+        
         self.filename = ''
         self.data = ''
         self.pasta = f'no{id+1}/'
         self.peers = None
+        self.hashtable = []
+        
         Thread(target=self.servidor).start()
         print(f'criado nó {self.id} com porta {self.porta}')
+        
 
-        # identifica as informações que cada nó tem
+        self.files = {}
         self.hash = {}
+        try:
+            os.mkdir(self.pasta)
+        except:
+            pass
     
     # ------------------------------    
     # funções de guardar data
     # ------------------------------    
 
-    def put(self, data):
-        self.data = data
+    def PUT(self, data):
+        self.make_file(data)
+        self.get_files()
+
+    def GET(self, id):
+        try:
+            return self.files[id] 
+        except:
+            return False
+
 
     def vizinhos(self, nb):
         self.peers = nb
 
+    def encode(self):
+        return randint(1,2**32)
+    
+    def get_files(self):
+            files = os.listdir(self.pasta)
+            for file in files:
+                self.files[self.encode()] = file
+    
+    def make_file(self, data):
+        with open(f'{self.pasta}/{data}', 'w') as arquivo:
+            for _ in range(128):
+                arquivo.write(f'{randint(0,9)}')
+
     # ------------------------------    
     # funções de request
     # ------------------------------    
-
-    def get(self, id):
-        # DFS em rede (a fazer)
-        pass
 
     # Pega informações dos vizinhos.
 
@@ -75,7 +100,6 @@ class Node():
             filename = req.split(" ")[1]
             self.receive_file(mClientSocket, filename)
 
-        
 
     def servidor(self):
         SocketServer = socket(AF_INET, SOCK_STREAM)
