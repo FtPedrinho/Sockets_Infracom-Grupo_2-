@@ -1,6 +1,6 @@
 Projeto da disciplina de Infraestrutura de Comunicação, cursada na graduação em Ciência da Computação no Centro de Informática da UFPE.
 
-Equipe: 
+Integrantes (Grupo 2):
 - [Filipe Moreira Cabral](https://github.com/filipecml);
 - [Pedro Henrique Dantas Soares](https://github.com/phds3);
 - [Pedro Elias Gonçalves de Andrade](https://github.com/FtPedrinho);
